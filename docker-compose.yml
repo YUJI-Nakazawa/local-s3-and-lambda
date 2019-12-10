@@ -1,0 +1,25 @@
+version: '3'
+
+services:
+  minio:
+    image: minio/minio:latest
+    ports:
+      - $MINIO_HOST_PORT:9000
+    volumes:
+      - ./data/minio/data:/export
+      - ./data/minio/config:/root/.minio
+    environment:
+      MINIO_ACCESS_KEY: $MINIO_ACCESS_KEY
+      MINIO_SECRET_KEY: $MINIO_SECRET_KEY
+    command: server /export
+  createbuckets:
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until (/usr/bin/mc config host add $MINIO_SERVICE_ALIAS http://minio:9000 $MINIO_ACCESS_KEY $MINIO_SECRET_KEY) do echo '...waiting...' && sleep 1; done;
+      /usr/bin/mc mb $MINIO_SERVICE_ALIAS/$MINIO_BUCKET;
+      /usr/bin/mc policy download $MINIO_SERVICE_ALIAS/$MINIO_BUCKET;
+      exit 0;
+      "
